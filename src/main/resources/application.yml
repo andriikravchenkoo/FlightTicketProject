@@ -1,33 +1,26 @@
-## Swagger
 spring:
+  flyway:
+    enabled: false
   mvc:
     pathmatch:
       matching-strategy: ANT_PATH_MATCHER
 
-  ## Postgresql Datasource
   datasource:
-    url: jdbc:postgresql://localhost:5432/flight_ticket_project
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
-  ## JPA
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     defer-datasource-initialization: true
     show-sql: true
 
-## Goflightlabs
-url:
-  access-key:
-  base: https://app.goflightlabs.com
-
-## Server
 server:
   servlet:
     context-path: /air-ticket-booking
+  port: 8081
 
-## Security secret key
 jwt:
   secret:
     key: 7639792442264528482B4D6251655468576D5A7134743777217A25432A462D4A

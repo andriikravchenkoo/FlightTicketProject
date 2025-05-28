@@ -1,0 +1,42 @@
+version: '3.9'
+
+volumes:
+  pg_flight_ticket:
+
+services:
+  postgres-db:
+    image: postgres:14
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: flight_ticket_project
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg_flight_ticket:/var/lib/postgresql/data
+
+  flyway:
+    image: flyway/flyway:latest
+    container_name: flyway-migrations
+    command: -url=jdbc:postgresql://postgres-db:5432/flight_ticket_project -schemas=public -user=postgres -password=postgres migrate
+    volumes:
+      - ./flyway:/flyway/sql
+    depends_on:
+      - postgres-db
+    restart: on-failure
+
+  flight-ticket-app:
+    container_name: flight-ticket-app
+    build: .
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/flight_ticket_project
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - postgres-db
+      - flyway

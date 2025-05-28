@@ -8,11 +8,13 @@ import com.example.FlightTicketProject.entity.FareClassStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -24,68 +26,48 @@ public class GoflightlabsClientService {
 
     private final GoflightlabsResponseCustomDeserializer customDeserializer;
 
-    @Value("${url.base}")
-    private String baseUrl;
-
-    @Value("${url.access-key}")
-    private String accessKey;
-
     public Set<FlightDto> findFlightsByFilter(
             String adults,
             String origin,
             String destination,
             String departureDate,
             String fareClass) {
+
         log.info(
-                "Finding flights in Goflightlabs by filter: adults = {}, origin = {}, destination = {}, departureDate = {}, fareClass = {}",
-                adults,
-                origin,
-                destination,
-                departureDate,
-                fareClass);
+                "Reading mock flight data from file for: adults = {}, origin = {}, destination = {}, departureDate = {}, fareClass = {}",
+                adults, origin, destination, departureDate, fareClass);
 
-        String path =
-                "/search-best-flights?access_key={accessKey}&adults={adults}&origin={origin}&destination={destination}&departureDate={departureDate}&cabinClass={fareClass}";
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("mock/flights-response.json")) {
+            if (inputStream == null) {
+                throw new FileNotFoundException("Mock flight response file not found");
+            }
 
-        Map<String, String> params =
-                Map.of(
-                        "accessKey", accessKey,
-                        "adults", adults,
-                        "origin", origin,
-                        "destination", destination,
-                        "departureDate", departureDate,
-                        "fareClass", fareClass.toLowerCase());
+            String json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
 
-        String url =
-                UriComponentsBuilder.fromHttpUrl(baseUrl)
-                        .path(path)
-                        .buildAndExpand(params)
-                        .toUriString();
+            return customDeserializer.flightResponseDeserialize(
+                    json, FareClassStatus.valueOf(fareClass.toUpperCase()));
 
-        String json = restTemplate.getForObject(url, String.class);
-
-        return customDeserializer.flightResponseDeserialize(
-                json, FareClassStatus.valueOf(fareClass.toUpperCase()));
+        } catch (IOException e) {
+            log.error("Failed to read mock flight data file", e);
+            throw new RuntimeException("Unable to fetch flight data", e);
+        }
     }
 
+
     public List<AirportInfoDto> findAirportByCity(String city) {
-        log.info("Finding airport data in Goflightlabs by city = {}", city);
+        log.info("Reading mock airport data from file for city = {}", city);
 
-        String path = "/get-airport-data?access_key={accessKey}&query={query}";
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("mock/airports-response.json")) {
+            if (inputStream == null) {
+                throw new FileNotFoundException("Mock response file not found");
+            }
 
-        Map<String, String> param =
-                Map.of(
-                        "accessKey", accessKey,
-                        "query", city);
+            String json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            return customDeserializer.airportResponseDeserialize(json);
 
-        String url =
-                UriComponentsBuilder.fromHttpUrl(baseUrl)
-                        .path(path)
-                        .buildAndExpand(param)
-                        .toUriString();
-
-        String json = restTemplate.getForObject(url, String.class);
-
-        return customDeserializer.airportResponseDeserialize(json);
+        } catch (IOException e) {
+            log.error("Failed to read mock airport data file", e);
+            throw new RuntimeException("Unable to fetch airport data", e);
+        }
     }
 }
